@@ -1,0 +1,30 @@
+# pretraining config
+seed: 42
+
+data:
+  context_length: 256
+  patch_len: 16
+  stride: 16
+  num_synthetic_series: 5000
+  series_length: 512
+  noise_std: 0.1
+
+model:
+  d_model: 128
+  n_heads: 4
+  n_layers: 4
+  ffn_dim: 256
+  dropout: 0.1
+
+pretrain:
+  mask_ratio: 0.4
+  batch_size: 64
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  epochs: 20
+  warmup_steps: 500
+  ckpt_dir: artifacts/pretrain
+
+logging:
+  mlflow_experiment: ts-foundation-pretrain
+  log_every: 50
