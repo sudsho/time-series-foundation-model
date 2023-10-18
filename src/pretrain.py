@@ -12,6 +12,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Dict
 
+import mlflow
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -115,20 +116,29 @@ def main():
     ckpt_dir = Path(cfg["pretrain"]["ckpt_dir"])
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
-    best = float("inf")
-    for epoch in range(cfg["pretrain"]["epochs"]):
-        loss = train_one_epoch(
-            model, loader, optim,
-            mask_ratio=cfg["pretrain"]["mask_ratio"],
-            device=device,
-            log_every=cfg["logging"]["log_every"],
-        )
-        print(f"epoch {epoch}: avg_loss={loss:.4f}")
-        if loss < best:
-            best = loss
-            torch.save({"encoder": model.encoder.state_dict(),
-                        "config": asdict(model.encoder.cfg)},
-                       ckpt_dir / "best.pt")
+    mlflow.set_experiment(cfg["logging"]["mlflow_experiment"])
+    with mlflow.start_run():
+        for k, v in cfg["pretrain"].items():
+            mlflow.log_param(f"pre.{k}", v)
+        for k, v in cfg["model"].items():
+            mlflow.log_param(f"model.{k}", v)
+
+        best = float("inf")
+        for epoch in range(cfg["pretrain"]["epochs"]):
+            loss = train_one_epoch(
+                model, loader, optim,
+                mask_ratio=cfg["pretrain"]["mask_ratio"],
+                device=device,
+                log_every=cfg["logging"]["log_every"],
+            )
+            print(f"epoch {epoch}: avg_loss={loss:.4f}")
+            mlflow.log_metric("train_loss", loss, step=epoch)
+            if loss < best:
+                best = loss
+                torch.save({"encoder": model.encoder.state_dict(),
+                            "config": asdict(model.encoder.cfg)},
+                           ckpt_dir / "best.pt")
+        mlflow.log_metric("best_train_loss", best)
 
 
 if __name__ == "__main__":
