@@ -61,9 +61,9 @@ def test_patch_embedding_pos_added():
 def test_random_patch_mask_count():
     torch.manual_seed(0)
     mask = random_patch_mask(B=8, N=20, mask_ratio=0.5, device=torch.device("cpu"))
-    # roughly half masked per row (kthvalue handles ties coarsely so allow slack)
+    # exactly floor(0.5 * 20) = 10 masked per row
     counts = mask.sum(dim=1)
-    assert (counts >= 8).all() and (counts <= 12).all()
+    assert (counts == 10).all()
 
 
 def test_apply_mask_zeros_correctly():

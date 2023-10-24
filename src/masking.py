@@ -19,10 +19,13 @@ def random_patch_mask(B: int, N: int, mask_ratio: float,
         return torch.zeros(B, N, dtype=torch.bool, device=device)
 
     noise = torch.rand(B, N, device=device)
-    # smallest n_mask values per row are masked
-    threshold = noise.kthvalue(n_mask, dim=1, keepdim=True).values
-    mask = noise <= threshold
-    # ensure exactly n_mask (kthvalue ties handled coarsely)
+    # take the indices of the n_mask smallest values per row.
+    # this guarantees exactly n_mask masked positions per row, even when
+    # there are duplicate values (rand collisions are very rare but can
+    # happen and made the previous kthvalue+threshold approach flaky).
+    idx = noise.argsort(dim=1)[:, :n_mask]
+    mask = torch.zeros(B, N, dtype=torch.bool, device=device)
+    mask.scatter_(1, idx, True)
     return mask
 
 
