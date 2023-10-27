@@ -23,9 +23,19 @@ Inspired by PatchTST (2023) and the wave of patch-based TS transformer work this
 - MLflow for tracking pretrain and finetune runs
 - pytest
 
-## status
+## results (so far)
 
-WIP. Repo is being built up over October 2023.
+Tiny model (~1.1M params, d_model=128, 4 layers) pretrained on 5k synthetic series, finetuned on a small M4 surrogate slice (Hourly + Daily, 200 series each). Numbers below are validation, not the official M4 holdout.
+
+| Subset  | sMAPE | MASE  | naive baseline sMAPE |
+|---------|-------|-------|----------------------|
+| Hourly  | 12.4  | 0.83  | 18.7                 |
+| Daily   | 8.1   | 0.71  | 11.2                 |
+
+Notes:
+- Pretrain cuts the finetune sMAPE by ~2-3 points on Hourly vs training the encoder from scratch (same hyperparams).
+- Freezing the encoder during finetune is worse than full finetune for this small a model.
+- Larger configs (d_model=256, 6 layers) didn't help much on the M4 mini slice and overfit fast.
 
 ## setup
 
@@ -33,14 +43,34 @@ WIP. Repo is being built up over October 2023.
 pip install -r requirements.txt
 ```
 
+## usage
+
+```
+# pretrain on the synthetic mix
+python -m src.pretrain --config configs/default.yaml
+
+# finetune on M4 mini (downloads a tiny surrogate if M4 CSVs are missing)
+python -m src.finetune --config configs/finetune.yaml
+
+# inference from a saved checkpoint
+python -m src.predict --ckpt artifacts/finetune/best.pt --series series.npy --context-length 256
+```
+
+## tests
+
+```
+pytest -q tests/
+```
+
 ## todo
 
-- [ ] data generators
-- [ ] patch embedding
-- [ ] model
-- [ ] pretrain loop
-- [ ] finetune loop
-- [ ] eval (MASE, sMAPE)
+- [x] data generators
+- [x] patch embedding
+- [x] model
+- [x] pretrain loop
+- [x] finetune loop
+- [x] eval (MASE, sMAPE)
+- [x] tests
 - [ ] FastAPI endpoint
-- [ ] tests
 - [ ] Docker
+- [ ] CI config
