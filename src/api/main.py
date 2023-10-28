@@ -20,9 +20,11 @@ CKPT_PATH = os.environ.get("MODEL_CKPT", "artifacts/finetune/best.pt")
 
 
 class ForecastRequest(BaseModel):
-    series: List[float] = Field(..., description="1D history of the series")
+    series: List[float] = Field(..., min_items=8, max_items=10000,
+                                description="1D history of the series")
     context_length: Optional[int] = Field(
-        default=None, description="how much of the tail to use as context"
+        default=None, ge=8, le=2048,
+        description="how much of the tail to use as context",
     )
 
 
