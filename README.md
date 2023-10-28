@@ -22,8 +22,9 @@ Inspired by PatchTST (2023) and the wave of patch-based TS transformer work this
 - FastAPI + uvicorn for the /forecast endpoint
 - MLflow for tracking pretrain and finetune runs
 - pytest
+- Docker + docker-compose for local serving
 
-## results (so far)
+## results
 
 Tiny model (~1.1M params, d_model=128, 4 layers) pretrained on 5k synthetic series, finetuned on a small M4 surrogate slice (Hourly + Daily, 200 series each). Numbers below are validation, not the official M4 holdout.
 
@@ -56,10 +57,57 @@ python -m src.finetune --config configs/finetune.yaml
 python -m src.predict --ckpt artifacts/finetune/best.pt --series series.npy --context-length 256
 ```
 
+## serving
+
+```
+# spin up the FastAPI service in docker
+docker compose up --build
+# api at http://localhost:8000  (swagger at /docs)
+```
+
+POST a forecast request:
+```
+curl -X POST http://localhost:8000/forecast \
+  -H 'content-type: application/json' \
+  -d '{"series": [/* 256 floats */], "context_length": 256}'
+```
+
+`/health` returns 200 with `{"ok": true, "model_loaded": <bool>}`. If no checkpoint is mounted, `/forecast` will return 503.
+
 ## tests
 
 ```
 pytest -q tests/
+```
+
+CI config example lives at `ci/test.yml.example`. Move it under `.github/workflows/` once OAuth has the `workflow` scope.
+
+## deploy notes
+
+See `deploy/NOTES.md` for the rough decision log (Fly.io picked over AWS Fargate for cost on a side project).
+
+## repo layout
+
+```
+src/
+  data.py        # synthetic generators (sine, ar1, trend, rw, ...)
+  patches.py     # patchify / unpatchify / patch embedding
+  masking.py     # random patch masking for MPR
+  model.py       # encoder + recon/forecast heads
+  pretrain.py    # MPR pretraining loop with MLflow
+  finetune.py    # forecasting finetune with MASE/sMAPE eval
+  m4_mini.py     # M4 subset loader (with synthetic fallback)
+  metrics.py     # MASE, sMAPE
+  predict.py     # CLI inference entrypoint
+  api/main.py    # FastAPI service
+configs/
+  default.yaml   # pretrain config
+  finetune.yaml  # finetune config
+tests/           # pytest suite (~25 tests)
+ci/              # CI config example
+deploy/          # deploy notes
+Dockerfile
+docker-compose.yml
 ```
 
 ## todo
@@ -71,6 +119,8 @@ pytest -q tests/
 - [x] finetune loop
 - [x] eval (MASE, sMAPE)
 - [x] tests
-- [ ] FastAPI endpoint
-- [ ] Docker
-- [ ] CI config
+- [x] FastAPI endpoint
+- [x] Docker
+- [x] CI config
+- [ ] swap synthetic M4 surrogate for real M4 CSVs
+- [ ] try larger pretrain corpus with a few real series mixed in
