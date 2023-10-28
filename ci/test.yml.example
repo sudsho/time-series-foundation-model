@@ -1,0 +1,45 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: install (cpu)
+        run: |
+          python -m pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.0.1
+          pip install -r requirements.txt --no-deps || true
+          pip install -r requirements.txt
+
+      - name: lint
+        run: |
+          python -m py_compile src/*.py src/api/*.py
+
+      - name: pytest
+        run: |
+          pytest -q tests/
+
+  build-image:
+    runs-on: ubuntu-22.04
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker build (sanity)
+        run: docker build -t ts-foundation-model:ci .
