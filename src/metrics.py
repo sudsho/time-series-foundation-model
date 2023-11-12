@@ -22,7 +22,7 @@ def smape(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 def mase(y_true: np.ndarray, y_pred: np.ndarray, y_train: np.ndarray,
          seasonality: int = 1) -> float:
     """
-    MASE following the M4 spec.
+    Mean absolute scaled error.
     y_train is the in-sample series used to compute the naive seasonal scale.
     """
     y_true = np.asarray(y_true, dtype=np.float64)

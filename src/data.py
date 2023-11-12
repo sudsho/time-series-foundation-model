@@ -1,8 +1,8 @@
 """
-synthetic time series generators + a few public series loaders.
+synthetic time series generators.
 
 idea: pretrain on a wide mix of synthetic processes so the model sees
-diverse temporal structure. then finetune on a small real slice.
+diverse temporal structure.
 """
 from __future__ import annotations
 

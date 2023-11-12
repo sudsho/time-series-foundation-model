@@ -4,12 +4,9 @@ seed: 42
 data:
   context_length: 256
   patch_len: 16
-  stride: 16
   horizon: 24
-  dataset: m4_mini
   m4_subset:
     - Hourly
-    - Daily
   max_series: 200
 
 model:
@@ -28,15 +25,3 @@ finetune:
   epochs: 30
   early_stopping_patience: 5
   ckpt_dir: artifacts/finetune
-
-eval:
-  metrics:
-    - mase
-    - smape
-  m4_seasonality:
-    Hourly: 24
-    Daily: 1
-
-logging:
-  mlflow_experiment: ts-foundation-finetune
-  log_every: 25
