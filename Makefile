@@ -1,7 +1,10 @@
-.PHONY: install test lint pretrain finetune predict serve docker docker-up clean
+.PHONY: install smoke test lint pretrain finetune predict serve docker docker-up clean
 
 install:
 	pip install -r requirements.txt
+
+smoke:
+	python scripts/smoke.py
 
 test:
 	pytest -q tests/

@@ -20,7 +20,7 @@ from .patches import patchify
 
 def load_forecaster(ckpt_path: str, map_location: str = "cpu"
                     ) -> Tuple[TSForecaster, Dict]:
-    sd = torch.load(ckpt_path, map_location=map_location)
+    sd = torch.load(ckpt_path, map_location=map_location, weights_only=False)
     cfg_dict = sd["config"]
     cfg = ModelConfig(**cfg_dict)
     n_patches = sd["n_patches"]

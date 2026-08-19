@@ -15,6 +15,76 @@ Inspired by PatchTST (2023) and the wave of patch-based TS transformer work this
 3. For forecasting: drop the recon head, attach a linear forecasting head over the flattened token sequence, fine-tune.
 4. Eval sMAPE and MASE on a held-out split of the fine-tune series.
 
+## Quick start (runs offline)
+
+No downloads, no GPU, no API keys, no external services. The smoke builds a tiny
+deterministic synthetic dataset (seasonal + trend), pretrains a tiny encoder with
+masked patch reconstruction, finetunes a forecasting head, and forecasts a held-out
+series. It exercises the same code paths as the full pipeline (patchify, patch
+embedding, encoder, recon head, forecast head, predict, metrics).
+
+```
+python scripts/smoke.py      # or: make smoke
+```
+
+Real output (a couple of seconds on a laptop CPU):
+
+```
+==============================================================
+time-series-foundation-model :: offline tiny-CPU smoke
+==============================================================
+device=cpu  context_length=64  patch_len=8  n_patches=8  horizon=8
+
+[1] synthetic seasonal+trend dataset: (96, 72) (train=88, held=8)
+    tiny model: d_model=32 n_layers=2 n_heads=4 -> 19,752 params
+
+[2] patchify  (88, 64) -> (88, 8, 8)  (B,N,P)  OK
+    embed     (88, 8, 8) -> (88, 8, 32)  (B,N,D)  OK
+
+[3] MPR pretrain (masked-patch recon): MSE 1.2796 -> 0.7709
+
+[4] forecast finetune (MSE on 8-step horizon): 1.4996 -> 0.0028
+
+[5] forecast on a held-out series (predicted vs actual):
+    idx |  actual  | predicted
+      0 |  -0.4372 |  -0.4385
+      4 |   0.4557 |   0.5036
+      7 |  -0.3346 |  -0.1634
+    sMAPE=42.414%   MASE=0.272
+
+[6] mean sMAPE over 8 held-out series: 28.980%
+
+==============================================================
+SMOKE PASSED: pipeline runs offline, losses decrease, shapes OK
+==============================================================
+```
+
+MASE < 1 means the finetuned forecaster beats the naive one-step baseline on the
+held-out series. The smoke asserts the reconstruction MSE and forecasting MSE both
+decrease and that the patch-embedding and forecast output shapes are correct.
+
+Run the tests:
+
+```
+pytest -q tests/     # 38 passed
+```
+
+### What the full model / GPU / real data add
+
+The smoke is deliberately tiny so it runs anywhere. The shipped configs describe the
+real setup, which is heavier and benefits from a GPU:
+
+- **Bigger model**: `configs/default.yaml` uses `d_model=128, n_layers=4` (about 0.54M
+  params) versus the smoke's `d_model=32, n_layers=2` (about 20K params).
+- **Real pretraining**: `python -m src.pretrain --config configs/default.yaml` builds a
+  5000-series synthetic mix, masks 40% of patches, and trains for 20 epochs with MLflow
+  tracking (the headline masked-patch-reconstruction run).
+- **Forecasting finetune**: `python -m src.finetune --config configs/finetune.yaml`
+  attaches the forecast head and evaluates sMAPE / MASE. It uses a synthetic M4-style
+  surrogate unless `--data-dir` points at real M4 CSVs (nothing is downloaded).
+- **Zero-shot / GPU**: larger context windows, more layers, and the full synthetic mix
+  are where a GPU matters; the smoke covers the same math on CPU in seconds.
+
 ## stack
 
 - PyTorch 2.0

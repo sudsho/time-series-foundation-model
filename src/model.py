@@ -114,7 +114,8 @@ class TSForecaster(nn.Module):
 
     def load_pretrained_encoder(self, ckpt_path: str,
                                 map_location: str = "cpu") -> None:
-        sd = torch.load(ckpt_path, map_location=map_location)
+        sd = torch.load(ckpt_path, map_location=map_location,
+                        weights_only=False)
         if "encoder" in sd:
             self.encoder.load_state_dict(sd["encoder"])
         else:
